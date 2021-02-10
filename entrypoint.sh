@@ -91,7 +91,8 @@ fi
 
 if [ "${SLACK_URL}" != "" ]; then
   color="danger"
-  curl -s -X POST --data "payload={\"channel\":\"${SLACK_CHANNEL}\",\"attachments\":[{\"fallback\":\"${MESSAGE}\",\"title\":\":warning: Spot Termination${CLUSTER_INFO}\",\"color\":\"${color}\",\"fields\":[{\"title\":\"Node\",\"value\":\"${NODE_NAME}\",\"short\":false},{\"title\":\"Instance\",\"value\":\"${INSTANCE_ID}\",\"short\":true},{\"title\":\"Instance Type\",\"value\":\"${INSTANCE_TYPE}\",\"short\":true},{\"title\":\"Availability Zone\",\"value\":\"${AZ}\",\"short\":true}]}]}" "${SLACK_URL}"
+  PODS=`kubectl get pods -o wide -A | grep ${NODE_NAME} | grep -vE 'cattle-node-agent|datadog|infrastructure-daemonsets|canal' | awk'{print $2}'`
+  curl -s -X POST --data "payload={\"channel\":\"${SLACK_CHANNEL}\",\"attachments\":[{\"fallback\":\"${MESSAGE}\",\"title\":\":warning: Spot Termination${CLUSTER_INFO}\",\"color\":\"${color}\",\"fields\":[{\"title\":\"Node\",\"value\":\"${NODE_NAME}\",\"short\":false},{\"title\":\"Instance\",\"value\":\"${INSTANCE_ID}\",\"short\":true},{\"title\":\"Instance Type\",\"value\":\"${INSTANCE_TYPE}\",\"short\":true},{\"title\":\"Availability Zone\",\"value\":\"${AZ}\",\"short\":true},{\"title\":\"Impacted Pods\",\"value\":\"{$PODS}\",\"short\":true}]}]}" "${SLACK_URL}"
 fi
 
 # Notify Email address with a Google account
