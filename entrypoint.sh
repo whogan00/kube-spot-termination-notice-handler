@@ -92,8 +92,34 @@ fi
 if [ "${SLACK_URL}" != "" ]; then
   color="danger"
   PODS=`kubectl get pods -o wide -A | grep ${NODE_NAME} | grep -vE 'cattle-node-agent|datadog|infrastructure-daemonsets|canal' | awk '{print $2}'`
-  curl -s -X POST --data "payload={\"channel\":\"${SLACK_CHANNEL}\",\"attachments\":[{\"fallback\":\"${MESSAGE}\",\"title\":\":warning: Spot Termination${CLUSTER_INFO}\",\"color\":\"${color}\",\"fields\":[{\"title\":\"Node\",\"value\":\"${NODE_NAME}\",\"short\":false},{\"title\":\"Instance\",\"value\":\"${INSTANCE_ID}\",\"short\":true},{\"title\":\"Instance Type\",\"value\":\"${INSTANCE_TYPE}\",\"short\":true},{\"title\":\"Availability Zone\",\"value\":\"${AZ}\",\"short\":true},{\"title\":\"Impacted Pods\",\"value\":\"{$PODS}\",\"short\":true}]}]}" "${SLACK_URL}"
+  curl -s -X POST --data "payload={\"channel\":\"${SLACK_CHANNEL}\",\"attachments\":[{\"fallback\":\"${MESSAGE}\",\"title\":\":warning: Spot Termination${CLUSTER_INFO}\",\"color\":\"${color}\",\"fields\":[{\"title\":\"Node\",\"value\":\"${NODE_NAME}\",\"short\":false},{\"title\":\"Instance\",\"value\":\"${INSTANCE_ID}\",\"short\":true},{\"title\":\"Instance Type\",\"value\":\"${INSTANCE_TYPE}\",\"short\":true},{\"title\":\"Availability Zone\",\"value\":\"${AZ}\",\"short\":true},{\"title\":\"ASG\",\"value\":\"{$ASG_NAME}\",\"short\":true},{\"title\":\"Impacted Pods\",\"value\":\"{$PODS}\",\"short\":false}]}]}" "${SLACK_URL}"
 fi
+
+if [ "${DD_API_KEY}" != "" ]; then
+  curl -X POST "https://api.datadoghq.com/api/v1/series?api_key=${DD_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d @- << EOF
+{
+  "series": [
+    {
+      "metric": "kubernetes.spot_terminations",
+      "points": [
+        [
+          "${NOW}",
+          "1"
+        ]
+      ],
+      "host": "${INSTANCE_ID}",
+      "tags": [
+        "node:${NODE_NAME}",
+        "cluster:${CLUSTER_INFO}",
+        "asg":${ASG_NAME}
+      ],
+      "type": "counter"
+    }
+  ]
+}
+EOF
 
 # Notify Email address with a Google account
 # Provide: Gsuite email account and Password
